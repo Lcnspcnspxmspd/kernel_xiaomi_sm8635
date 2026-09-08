@@ -309,6 +309,13 @@ but shifts an exported CRC fails the KMI gate instead of shipping a bootloop.
 - Fixed BOOT-NOTES Rule 9 on HZ (module loading does not answer the timer question); dropped the
   duplicated Rules 11/12
 - Added the 2.8 first-boot bench record (`scripts/device/baselines/`)
+- Reverted the DRM "valid clones check" GuidixX had re-applied: Qualcomm removed it for causing
+  display flicker with the prebuilt display stack, and 2.7/2.8 users on stock `vendor_dlkm` saw
+  exactly that (assets rebuilt 2026-09-08)
+- Bumped ReSukiSU to `3c188288`: SELinux status-page/AVC-seqno spoof, webview-zygote umount,
+  module-load filter
+- Raised QRTR name-service caps (`MAX_LOOKUPS` and `MAX_NODES` 64 → 512) for ROMs that build
+  `qrtr.ko` from this tree
 
 ### 2.7 — 2026-09-04
 

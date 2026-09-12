@@ -8,11 +8,21 @@ static int battery_psy_set_charge_current(struct battery_chg_dev *bcdev, int val
 
 static int battery_chg_calc_fastcharge_mode(u32 sport_mode, u32 smart_chg)
 {
-	if (sport_mode == 1 && smart_chg == 8)
+	/*
+	 * Must match fastcharge_enable_store():
+	 *   0 → SMART_CHG 0x8, SPORT 0
+	 *   1 → SMART_CHG 0x9, SPORT 0
+	 *   2 → SMART_CHG 0x9, SPORT 1
+	 *
+	 * The previous check used smart_chg == 8 for modes 1/2, so a successful
+	 * write of 1 or 2 still read back as mode 0. The thermal policy then
+	 * applied the Slow ladder (index ≥ 13) and charge stayed capped.
+	 */
+	if (smart_chg != 0x9 && smart_chg != 9)
+		return 0;
+	if (sport_mode == 1)
 		return 2;
-	if (sport_mode == 0 && smart_chg == 8)
-		return 1;
-	return 0;
+	return 1;
 }
 
 static int battery_chg_get_fastcharge_mode(struct battery_chg_dev *bcdev, int *mode)

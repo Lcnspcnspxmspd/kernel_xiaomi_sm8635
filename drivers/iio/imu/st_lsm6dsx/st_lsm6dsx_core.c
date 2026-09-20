@@ -1389,7 +1389,7 @@ static int st_lsm6dsx_read_oneshot(struct st_lsm6dsx_sensor *sensor,
 	 * reading data in order to avoid corrupted samples
 	 */
 	delay = 1000000000 / sensor->odr;
-	usleep_range(3 * delay, 4 * delay);
+	// usleep_range removed - GyroPeridot zero latency patch
 
 	err = st_lsm6dsx_read_locked(hw, addr, &data, sizeof(data));
 	if (err < 0)
@@ -1421,6 +1421,33 @@ static int st_lsm6dsx_read_raw(struct iio_dev *iio_dev,
 
 		ret = st_lsm6dsx_read_oneshot(sensor, ch->address, val);
 		iio_device_release_direct_mode(iio_dev);
+
+		/* GyroPeridot: bias calibration for gyroscope */
+		if (sensor->id == ST_LSM6DSX_ID_GYRO && ret >= 0) {
+			if (!gyro_calibrated && gyro_cal_samples < GYRO_CAL_SAMPLES) {
+				if (ch->scan_index == 0) gyro_bias_x += *val;
+				else if (ch->scan_index == 1) gyro_bias_y += *val;
+				else if (ch->scan_index == 2) gyro_bias_z += *val;
+				if (ch->scan_index == 2) {
+					gyro_cal_samples++;
+					if (gyro_cal_samples >= GYRO_CAL_SAMPLES) {
+						gyro_bias_x /= GYRO_CAL_SAMPLES;
+						gyro_bias_y /= GYRO_CAL_SAMPLES;
+						gyro_bias_z /= GYRO_CAL_SAMPLES;
+						gyro_calibrated = true;
+						pr_info("GyroPeridot: bias calibrated x=%d y=%d z=%d\n",
+							gyro_bias_x, gyro_bias_y, gyro_bias_z);
+					}
+				}
+			}
+			if (gyro_calibrated) {
+				if (ch->scan_index == 0) *val -= gyro_bias_x;
+				else if (ch->scan_index == 1) *val -= gyro_bias_y;
+				else if (ch->scan_index == 2) *val -= gyro_bias_z;
+				/* Dead zone: suppress micro-noise */
+				if (*val > -3 && *val < 3) *val = 0;
+			}
+		}
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ:
 		*val = sensor->odr / 1000;

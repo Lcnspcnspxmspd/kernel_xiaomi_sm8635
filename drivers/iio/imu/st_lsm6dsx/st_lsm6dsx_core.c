@@ -1406,6 +1406,13 @@ static int st_lsm6dsx_read_oneshot(struct st_lsm6dsx_sensor *sensor,
 	return IIO_VAL_INT;
 }
 
+
+/* GyroPeridot: Zero-bias gyro calibration */
+static int gyro_bias_x = 0, gyro_bias_y = 0, gyro_bias_z = 0;
+static int gyro_cal_samples = 0;
+static bool gyro_calibrated = false;
+#define GYRO_CAL_SAMPLES 100
+
 static int st_lsm6dsx_read_raw(struct iio_dev *iio_dev,
 			       struct iio_chan_spec const *ch,
 			       int *val, int *val2, long mask)
